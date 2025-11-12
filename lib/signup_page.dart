@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'login_page.dart';
-import 'home_page.dart';
+import 'services/auth_service.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -333,21 +333,47 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
                                       setState(() {
                                         _isLoading = true;
                                       });
-                                      // Simulate loading
-                                      await Future.delayed(
-                                        const Duration(seconds: 1),
+
+                                      final result = await AuthService.signup(
+                                        fullName: _fullNameController.text
+                                            .trim(),
+                                        email: _emailController.text.trim(),
+                                        password: _passwordController.text,
                                       );
+
                                       setState(() {
                                         _isLoading = false;
                                       });
-                                      // Navigate to HomePage
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const HomePage(),
-                                        ),
-                                      );
+
+                                      if (result['success']) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Account created successfully! Please log in.',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                        // Navigate to LoginPage
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const LoginPage(),
+                                          ),
+                                        );
+                                      } else {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(result['message']),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
                                     }
                                   },
                             style: ElevatedButton.styleFrom(

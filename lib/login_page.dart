@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'signup_page.dart';
-import 'home_page.dart';
+import 'account_screen.dart';
+import 'vote_homepage.dart';
+import 'admin_screen.dart';
+import 'services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -112,7 +115,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           controller: _idController,
                           textAlign: TextAlign.center,
                           decoration: InputDecoration(
-                            labelText: 'ID Number',
+                            labelText: 'Email',
                             labelStyle: TextStyle(
                               color: kTitleColor.withOpacity(0.8),
                             ),
@@ -136,7 +139,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter your ID Number';
+                              return 'Please enter your email';
+                            }
+                            if (!RegExp(
+                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                            ).hasMatch(value)) {
+                              return 'Please enter a valid email';
                             }
                             return null;
                           },
@@ -197,21 +205,41 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                       setState(() {
                                         _isLoading = true;
                                       });
-                                      // Simulate loading
-                                      await Future.delayed(
-                                        const Duration(seconds: 1),
+
+                                      final result = await AuthService.login(
+                                        _idController.text.trim(),
+                                        _passwordController.text,
                                       );
+
                                       setState(() {
                                         _isLoading = false;
                                       });
-                                      // Navigate to HomePage
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const HomePage(),
-                                        ),
-                                      );
+
+                                      if (result['success']) {
+                                        // Check user role and navigate accordingly
+                                        final user =
+                                            await AuthService.getCurrentUser();
+                                        final role = user?['role'];
+                                        Widget homePage = role == 'admin'
+                                            ? const AdminScreen()
+                                            : const VoteHomePage();
+
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => homePage,
+                                          ),
+                                        );
+                                      } else {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(result['message']),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
                                     }
                                   },
                             style: ElevatedButton.styleFrom(

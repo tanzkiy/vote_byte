@@ -1,17 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'login_page.dart';
+import 'vote_homepage.dart';
+import 'admin_screen.dart';
+import 'services/auth_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Widget? _home;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final isLoggedIn = await AuthService.isLoggedIn();
+    if (isLoggedIn) {
+      final user = await AuthService.getCurrentUser();
+      final role = user?['role'];
+      setState(() {
+        _home = role == 'admin' ? const AdminScreen() : const VoteHomePage();
+      });
+    } else {
+      setState(() {
+        _home = const LoginPage();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_home == null) {
+      // Show loading screen while checking login status
+      return MaterialApp(
+        title: 'BYTE Voting System',
+        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
+      );
+    }
+
     return MaterialApp(
       title: 'BYTE Voting System',
       theme: ThemeData(
@@ -44,7 +83,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const LoginPage(),
+      home: _home,
     );
   }
 }

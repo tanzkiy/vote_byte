@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "988755904250",
+    "project_id": "byte-voting-system",
+    "storage_bucket": "byte-voting-system.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:988755904250:android:790318cd21566c0b486b43",
+        "android_client_info": {
+          "package_name": "com.example.byte_voting_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcSCor2OTvfFzYYCBxLuCgnJhfczeuTfg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/voting_service.dart';
+import 'widgets/app_background.dart';
 
 class CandidateManagementScreen extends StatefulWidget {
   const CandidateManagementScreen({super.key});
@@ -10,13 +11,26 @@ class CandidateManagementScreen extends StatefulWidget {
 }
 
 class _CandidateManagementScreenState extends State<CandidateManagementScreen> {
-  List<Map<String, dynamic>> _candidates = List.from(VotingService.candidates);
+  List<Map<String, dynamic>> _candidates = [];
   final _formKey = GlobalKey<FormState>();
-  String _selectedPosition = 'President';
+  String _selectedPosition = VotingService.getPositions().first;
   final _nameController = TextEditingController();
   final _yearController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _imageUrlController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCandidates();
+  }
+
+  Future<void> _loadCandidates() async {
+    final candidates = await VotingService.getCandidates();
+    setState(() {
+      _candidates = candidates;
+    });
+  }
 
   @override
   void dispose() {
@@ -27,7 +41,7 @@ class _CandidateManagementScreenState extends State<CandidateManagementScreen> {
     super.dispose();
   }
 
-  void _addCandidate() {
+  void _addCandidate() async {
     if (_formKey.currentState!.validate()) {
       final newCandidate = {
         'id':
@@ -41,27 +55,97 @@ class _CandidateManagementScreenState extends State<CandidateManagementScreen> {
             : "https://picsum.photos/id/${DateTime.now().millisecondsSinceEpoch % 1000}/150/150",
       };
 
+      await VotingService.addCandidate(newCandidate);
+
       setState(() {
         _candidates.add(newCandidate);
-        VotingService.candidates = _candidates; // Update the service
       });
 
       _clearForm();
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Candidate added successfully')),
-      );
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        final sm = ScaffoldMessenger.of(context);
+        sm.hideCurrentSnackBar();
+        sm.showSnackBar(
+          const SnackBar(
+            content: Text('Candidate added successfully'),
+            duration: Duration(milliseconds: 1200),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
-  void _removeCandidate(int index) {
-    setState(() {
-      _candidates.removeAt(index);
-      VotingService.candidates = _candidates; // Update the service
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Candidate removed successfully')),
+  void _removeCandidate(int index) async {
+    // Add bounds checking to prevent RangeError
+    if (index < 0 || index >= _candidates.length) {
+      return;
+    }
+    
+    final candidate = _candidates[index];
+    _removeCandidateByData(candidate, index);
+  }
+
+  void _removeCandidateByData(Map<String, dynamic> candidate, int index) async {
+    // Show confirmation dialog before deletion
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Deletion'),
+        content: Text('Are you sure you want to remove ${candidate['name']} from the ${candidate['position']} position?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    final candidateId = candidate['id'] as String;
+    
+    try {
+      await VotingService.removeCandidate(candidateId);
+
+      setState(() {
+        _candidates.removeAt(index);
+      });
+      
+      if (context.mounted) {
+        final sm = ScaffoldMessenger.of(context);
+        sm.hideCurrentSnackBar();
+        sm.showSnackBar(
+          const SnackBar(
+            content: Text('Candidate removed successfully'),
+            duration: Duration(milliseconds: 1200),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        final sm = ScaffoldMessenger.of(context);
+        sm.hideCurrentSnackBar();
+        sm.showSnackBar(
+          SnackBar(
+            content: Text('Error removing candidate: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(milliseconds: 2000),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   void _clearForm() {
@@ -83,9 +167,9 @@ class _CandidateManagementScreenState extends State<CandidateManagementScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
-                  value: _selectedPosition,
+                  initialValue: _selectedPosition,
                   decoration: const InputDecoration(labelText: 'Position'),
-                  items: ['President', 'Vice-President', 'Secretary']
+                  items: VotingService.getPositions()
                       .map(
                         (position) => DropdownMenuItem(
                           value: position,
@@ -165,30 +249,35 @@ class _CandidateManagementScreenState extends State<CandidateManagementScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView.builder(
-          itemCount: _candidates.length,
-          itemBuilder: (context, index) {
-            final candidate = _candidates[index];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: NetworkImage(candidate['imageUrl']),
-                  onBackgroundImageError: (_, __) => const Icon(Icons.person),
+      body: AppBackground(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: ListView.builder(
+            itemCount: _candidates.length,
+            itemBuilder: (context, index) {
+              final candidate = _candidates[index];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: NetworkImage(candidate['imageUrl']),
+                    onBackgroundImageError: (_, __) => const Icon(Icons.person),
+                  ),
+                  title: Text(candidate['name']),
+                  subtitle: Text(
+                    '${candidate['position']} - ${candidate['year']}',
+                  ),
+                  trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        // Pass both the candidate data and index for more robust handling
+                        _removeCandidateByData(candidate, index);
+                      },
+                    ),
                 ),
-                title: Text(candidate['name']),
-                subtitle: Text(
-                  '${candidate['position']} - ${candidate['year']}',
-                ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => _removeCandidate(index),
-                ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

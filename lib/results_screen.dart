@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/voting_service.dart';
+import 'widgets/app_background.dart';
 
 class ResultsScreen extends StatefulWidget {
   const ResultsScreen({super.key});
@@ -51,11 +52,12 @@ class _ResultsScreenState extends State<ResultsScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          : AppBackground(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   const Text(
                     'Election Results',
                     style: TextStyle(
@@ -65,34 +67,48 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'Total Votes: ${_results?['totalVotes'] ?? 0}',
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.how_to_vote, color: Color(0xFF2E3A8C)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Total Votes: ${_results?['totalVotes'] ?? 0}',
+                          style: const TextStyle(fontSize: 16, color: Color(0xFF2E3A8C)),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Expanded(
                     child: ListView(
                       children: [
                         if (_results != null) ...[
-                          _buildPositionResults(
-                            'President',
-                            _results!['President'],
-                          ),
-                          const SizedBox(height: 20),
-                          _buildPositionResults(
-                            'Vice-President',
-                            _results!['Vice-President'],
-                          ),
-                          const SizedBox(height: 20),
-                          _buildPositionResults(
-                            'Secretary',
-                            _results!['Secretary'],
-                          ),
+                          ...VotingService.getPositions().expand((p) => [
+                                _buildPositionResults(
+                                  p,
+                                  (_results![p] as Map<String, dynamic>?) ?? <String, dynamic>{},
+                                ),
+                                const SizedBox(height: 20),
+                              ])
                         ],
                       ],
                     ),
                   ),
                 ],
+                ),
               ),
             ),
     );
@@ -106,7 +122,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 5,
           ),

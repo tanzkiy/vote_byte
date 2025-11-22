@@ -1,5 +1,8 @@
 import "package:flutter/material.dart";
 import 'package:flutter/services.dart';
+import 'services/voting_service.dart';
+import 'services/auth_service.dart';
+import 'widgets/app_background.dart';
 
 // --- Screen 1: Candidate Info (Based on your first image) ---
 
@@ -16,12 +19,13 @@ class CandidateInfoScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: _buildMainAppBar(context), // Use shared AppBar
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      body: AppBackground(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               // "For School Year..." info box
               Container(
                 padding: const EdgeInsets.all(12.0),
@@ -53,7 +57,7 @@ class CandidateInfoScreen extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                       ),
@@ -91,8 +95,9 @@ class CandidateInfoScreen extends StatelessWidget {
               const SizedBox(height: 80.0), // Spacer for FAB
             ],
           ),
+            ),
+          ),
         ),
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           // Navigate to the Ballot Screen!
@@ -145,7 +150,7 @@ class CandidateProfileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.1),
+            color: Colors.blue.withValues(alpha: 0.1),
             blurRadius: 10,
             spreadRadius: 2,
             offset: const Offset(0, 4),
@@ -241,14 +246,15 @@ class _BallotScreenState extends State<BallotScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      appBar: _buildMainAppBar(context), // Use shared AppBar
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: _buildMainAppBar(context),
+      body: AppBackground(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               const InstructionsCard(),
               const SizedBox(height: 20.0),
               PositionCard(
@@ -301,10 +307,73 @@ class _BallotScreenState extends State<BallotScreen> {
                           child: const Text("Cancel"),
                         ),
                         TextButton(
-                          onPressed: () {
+                          onPressed: () async {
                             // Add final submit logic here
-                            Navigator.pop(ctx); // Close dialog
-                            Navigator.pop(context); // Go back to info screen
+                            try {
+                              // Get current user
+                              final currentUser = await AuthService.getCurrentUser();
+                              if (currentUser == null) {
+                                throw Exception('User not logged in');
+                              }
+
+                              // Check if user has already voted
+                              final hasVoted = await VotingService.hasUserVoted();
+                              if (hasVoted) {
+                                Navigator.pop(ctx); // Close dialog
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('You have already voted!')),
+                                  );
+                                }
+                                return;
+                              }
+
+                              // Validate that all positions have been selected
+                              if (_selectedPresident == null || _selectedVicePresident == null || _selectedSecretary == null) {
+                                Navigator.pop(ctx); // Close dialog
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please select candidates for all positions!')),
+                                  );
+                                }
+                                return;
+                              }
+
+                              // Submit the vote
+                              final voteData = {
+                                'President': _selectedPresident!,
+                                'Vice-President': _selectedVicePresident!,
+                                'Secretary': _selectedSecretary!,
+                              };
+
+                              final result = await VotingService.submitVote(voteData);
+                              
+                              if (!result['success']) {
+                                throw Exception(result['message']);
+                              }
+
+                              // Show success message
+                              Navigator.pop(ctx); // Close dialog
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Vote submitted successfully!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                Navigator.pop(context); // Go back to info screen
+                              }
+                            } catch (e) {
+                              Navigator.pop(ctx); // Close dialog
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error submitting vote: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           },
                           child: const Text("Submit"),
                         ),
@@ -329,10 +398,10 @@ class _BallotScreenState extends State<BallotScreen> {
                 ),
               ),
             ],
+            ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
 
@@ -344,7 +413,7 @@ class InstructionsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 4.0,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
@@ -433,7 +502,7 @@ class PositionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 4.0,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,

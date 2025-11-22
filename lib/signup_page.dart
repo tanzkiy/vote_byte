@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'login_page.dart';
+import 'widgets/app_background.dart';
 import 'services/auth_service.dart';
 
 class SignupPage extends StatefulWidget {
@@ -12,7 +13,6 @@ class SignupPage extends StatefulWidget {
 class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _studentIdController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
@@ -22,6 +22,8 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
   late Animation<double> _fadeAnimation;
   late Animation<double> _glowAnimation;
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void initState() {
@@ -43,7 +45,6 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
   void dispose() {
     _animationController.dispose();
     _fullNameController.dispose();
-    _studentIdController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -53,24 +54,13 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     // These colors are approximated from your image to match the style
-    final Color kGradientTop = Colors.indigo[50]!; // Light periwinkle/blue
-    final Color kGradientBottom =
-        Colors.indigo[100]!; // Slightly darker periwinkle
     final Color kTitleColor = Colors.indigo[800]!; // Dark blue/purple for text
     final Color kFieldColor = Colors.indigo[200]!; // Light blue for text fields
     final Color kButtonColor = Colors.blue[700]!; // Strong blue for the button
     final Color kLinkColor = Colors.indigo[700]!;
-    final Color kSubtitleColor = Colors.indigo[400]!;
 
     return Scaffold(
-      body: Container(
-        // Use background image
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/background.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
+      body: AppBackground(
         child: SafeArea(
           child: Center(
             // Use SingleChildScrollView to avoid overflow on smaller screens
@@ -91,7 +81,7 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
                         errorBuilder: (context, error, stackTrace) => Container(
                           width: 100,
                           height: 100,
-                          color: Colors.blue.withOpacity(0.2),
+                          color: Colors.blue.withValues(alpha: 0.2),
                           child: const Icon(
                             Icons.business,
                             size: 50,
@@ -121,7 +111,7 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
                           decoration: InputDecoration(
                             labelText: 'Full Name',
                             labelStyle: TextStyle(
-                              color: kTitleColor.withOpacity(0.8),
+                              color: kTitleColor.withValues(alpha: 0.8),
                             ),
                             floatingLabelStyle: TextStyle(
                               color: kTitleColor,
@@ -151,45 +141,6 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
                       ),
                       const SizedBox(height: 16),
 
-                      // Student ID Field
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                        child: TextFormField(
-                          controller: _studentIdController,
-                          textAlign: TextAlign.center,
-                          decoration: InputDecoration(
-                            labelText: 'Student ID',
-                            labelStyle: TextStyle(
-                              color: kTitleColor.withOpacity(0.8),
-                            ),
-                            floatingLabelStyle: TextStyle(
-                              color: kTitleColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            filled: true,
-                            fillColor: kFieldColor,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                              borderSide: BorderSide(
-                                color: kButtonColor,
-                                width: 2.0,
-                              ),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your Student ID';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
                       // Email Field
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -199,7 +150,7 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
                           decoration: InputDecoration(
                             labelText: 'Email',
                             labelStyle: TextStyle(
-                              color: kTitleColor.withOpacity(0.8),
+                              color: kTitleColor.withValues(alpha: 0.8),
                             ),
                             floatingLabelStyle: TextStyle(
                               color: kTitleColor,
@@ -240,11 +191,11 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
                         child: TextFormField(
                           controller: _passwordController,
                           textAlign: TextAlign.center,
-                          obscureText: true,
+                          obscureText: _obscurePassword,
                           decoration: InputDecoration(
                             labelText: 'Password',
                             labelStyle: TextStyle(
-                              color: kTitleColor.withOpacity(0.8),
+                              color: kTitleColor.withValues(alpha: 0.8),
                             ),
                             floatingLabelStyle: TextStyle(
                               color: kTitleColor,
@@ -261,6 +212,37 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
                               borderSide: BorderSide(
                                 color: kButtonColor,
                                 width: 2.0,
+                              ),
+                            ),
+                            suffixIcon: Container(
+                              margin: const EdgeInsets.only(right: 8.0),
+                              child: IconButton(
+                                icon: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  transitionBuilder: (child, animation) {
+                                    return ScaleTransition(scale: animation, child: child);
+                                  },
+                                  child: Icon(
+                                    _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                    key: ValueKey<bool>(_obscurePassword),
+                                    color: kTitleColor.withValues(alpha: 0.5),
+                                    size: 22,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  padding: const EdgeInsets.all(8.0),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20.0),
+                                  ),
+                                  hoverColor: kTitleColor.withValues(alpha: 0.1),
+                                  highlightColor: kTitleColor.withValues(alpha: 0.15),
+                                ),
                               ),
                             ),
                           ),
@@ -283,11 +265,11 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
                         child: TextFormField(
                           controller: _confirmPasswordController,
                           textAlign: TextAlign.center,
-                          obscureText: true,
+                          obscureText: _obscureConfirmPassword,
                           decoration: InputDecoration(
                             labelText: 'Confirm Password',
                             labelStyle: TextStyle(
-                              color: kTitleColor.withOpacity(0.8),
+                              color: kTitleColor.withValues(alpha: 0.8),
                             ),
                             floatingLabelStyle: TextStyle(
                               color: kTitleColor,
@@ -304,6 +286,37 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
                               borderSide: BorderSide(
                                 color: kButtonColor,
                                 width: 2.0,
+                              ),
+                            ),
+                            suffixIcon: Container(
+                              margin: const EdgeInsets.only(right: 8.0),
+                              child: IconButton(
+                                icon: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  transitionBuilder: (child, animation) {
+                                    return ScaleTransition(scale: animation, child: child);
+                                  },
+                                  child: Icon(
+                                    _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                    key: ValueKey<bool>(_obscureConfirmPassword),
+                                    color: kTitleColor.withValues(alpha: 0.5),
+                                    size: 22,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscureConfirmPassword = !_obscureConfirmPassword;
+                                  });
+                                },
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  padding: const EdgeInsets.all(8.0),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20.0),
+                                  ),
+                                  hoverColor: kTitleColor.withValues(alpha: 0.1),
+                                  highlightColor: kTitleColor.withValues(alpha: 0.15),
+                                ),
                               ),
                             ),
                           ),
@@ -346,33 +359,37 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
                                       });
 
                                       if (result['success']) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Account created successfully! Please log in.',
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Account created successfully! Please log in.',
+                                              ),
+                                              backgroundColor: Colors.green,
                                             ),
-                                            backgroundColor: Colors.green,
-                                          ),
-                                        );
-                                        // Navigate to LoginPage
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const LoginPage(),
-                                          ),
-                                        );
+                                          );
+                                          // Navigate to LoginPage
+                                          Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const LoginPage(),
+                                            ),
+                                          );
+                                        }
                                       } else {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(result['message']),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(result['message']),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
                                       }
                                     }
                                   },
@@ -383,7 +400,7 @@ class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
                                 borderRadius: BorderRadius.circular(30.0),
                               ),
                               elevation: _glowAnimation.value,
-                              shadowColor: Colors.blue.withOpacity(0.7),
+                              shadowColor: Colors.blue.withValues(alpha: 0.7),
                             ),
                             child: _isLoading
                                 ? const SizedBox(

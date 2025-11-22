@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'signup_page.dart';
-import 'account_screen.dart';
+import 'widgets/app_background.dart';
 import 'vote_homepage.dart';
 import 'admin_screen.dart';
 import 'services/auth_service.dart';
@@ -21,6 +21,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   late Animation<double> _fadeAnimation;
   late Animation<double> _glowAnimation;
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -49,24 +50,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     // These colors are approximated from your image to match the style
-    final Color kGradientTop = Colors.indigo[50]!; // Light periwinkle/blue
-    final Color kGradientBottom =
-        Colors.indigo[100]!; // Slightly darker periwinkle
     final Color kTitleColor = Colors.indigo[800]!; // Dark blue/purple for text
     final Color kFieldColor = Colors.indigo[200]!; // Light blue for text fields
     final Color kButtonColor = Colors.blue[700]!; // Strong blue for the button
     final Color kLinkColor = Colors.indigo[700]!;
-    final Color kSubtitleColor = Colors.indigo[400]!;
 
     return Scaffold(
-      body: Container(
-        // Use background image
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/background.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
+      body: AppBackground(
         child: SafeArea(
           child: Center(
             // Use SingleChildScrollView to avoid overflow on smaller screens
@@ -87,7 +77,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                         errorBuilder: (context, error, stackTrace) => Container(
                           width: 100,
                           height: 100,
-                          color: Colors.blue.withOpacity(0.2),
+                          color: Colors.blue.withValues(alpha: 0.2),
                           child: const Icon(
                             Icons.business,
                             size: 50,
@@ -117,7 +107,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           decoration: InputDecoration(
                             labelText: 'Email',
                             labelStyle: TextStyle(
-                              color: kTitleColor.withOpacity(0.8),
+                              color: kTitleColor.withValues(alpha: 0.8),
                             ),
                             floatingLabelStyle: TextStyle(
                               color: kTitleColor,
@@ -158,11 +148,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                         child: TextFormField(
                           controller: _passwordController,
                           textAlign: TextAlign.center,
-                          obscureText: true,
+                          obscureText: _obscurePassword,
                           decoration: InputDecoration(
                             labelText: 'Password',
                             labelStyle: TextStyle(
-                              color: kTitleColor.withOpacity(0.8),
+                              color: kTitleColor.withValues(alpha: 0.8),
                             ),
                             floatingLabelStyle: TextStyle(
                               color: kTitleColor,
@@ -179,6 +169,37 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               borderSide: BorderSide(
                                 color: kButtonColor,
                                 width: 2.0,
+                              ),
+                            ),
+                            suffixIcon: Container(
+                              margin: const EdgeInsets.only(right: 8.0),
+                              child: IconButton(
+                                icon: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  transitionBuilder: (child, animation) {
+                                    return ScaleTransition(scale: animation, child: child);
+                                  },
+                                  child: Icon(
+                                    _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                    key: ValueKey<bool>(_obscurePassword),
+                                    color: kTitleColor.withValues(alpha: 0.5),
+                                    size: 22,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  padding: const EdgeInsets.all(8.0),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20.0),
+                                  ),
+                                  hoverColor: kTitleColor.withValues(alpha: 0.1),
+                                  highlightColor: kTitleColor.withValues(alpha: 0.15),
+                                ),
                               ),
                             ),
                           ),
@@ -224,21 +245,27 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                             ? const AdminScreen()
                                             : const VoteHomePage();
 
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => homePage,
-                                          ),
-                                        );
+                                        if (context.mounted) {
+                                          Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => homePage,
+                                            ),
+                                          );
+                                        }
                                       } else {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(result['message']),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
+                                        if (context.mounted) {
+                                          final sm = ScaffoldMessenger.of(context);
+                                          sm.hideCurrentSnackBar();
+                                          sm.showSnackBar(
+                                            SnackBar(
+                                              content: Text(result['message']),
+                                              backgroundColor: Colors.red,
+                                              duration: const Duration(milliseconds: 1200),
+                                              behavior: SnackBarBehavior.floating,
+                                            ),
+                                          );
+                                        }
                                       }
                                     }
                                   },
@@ -249,7 +276,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 borderRadius: BorderRadius.circular(30.0),
                               ),
                               elevation: _glowAnimation.value,
-                              shadowColor: Colors.blue.withOpacity(0.7),
+                              shadowColor: Colors.blue.withValues(alpha: 0.7),
                             ),
                             child: _isLoading
                                 ? const SizedBox(
